@@ -3,6 +3,7 @@ package browser
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/git-town/git-town/v24/internal/browser/browserdomain"
 	"github.com/git-town/git-town/v24/internal/messages"
@@ -15,6 +16,12 @@ import (
 func Open(url string, frontend subshelldomain.Runner, executable Option[browserdomain.BrowserExecutable], enabled browserdomain.BrowserEnabled) {
 	if !enabled {
 		fmt.Printf(messages.BrowserOpen, url)
+		return
+	}
+	if runtime.GOOS == "windows" && executable.IsNone() {
+		if err := frontend.Run("rundll32", "url.dll,FileProtocolHandler", url); err != nil {
+			fmt.Printf(messages.BrowserOpen, url)
+		}
 		return
 	}
 	command, hasCommand := OpenBrowserCommand(executable).Get()
