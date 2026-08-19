@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -88,10 +87,6 @@ func (self *FrontendRunner) execute(env []string, cmd string, args ...string) er
 	}
 	if self.PrintCommands {
 		PrintCommand(location, self.PrintBranchNames, env, cmd, args...)
-	}
-	if runtime.GOOS == "windows" && cmd == "start" {
-		args = append([]string{"/C", cmd}, args...)
-		cmd = "cmd"
 	}
 	concurrentGitRetriesLeft := concurrentGitRetries
 	var err error
