@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -88,6 +89,17 @@ func (self *FrontendRunner) execute(env []string, cmd string, args ...string) er
 	if self.PrintCommands {
 		PrintCommand(location, self.PrintBranchNames, env, cmd, args...)
 	}
+	if runtime.GOOS == "windows" && cmd == "start" {
+		// "cmd /C start <url>" causes CMD to re-parse everything after "/C" as a raw
+		// command string, treating "&" as a command separator. Escape metacharacters
+		// with "^" so they are passed to "start" literally.
+		escapedArgs := make([]string, len(args))
+		for i, arg := range args {
+			escapedArgs[i] = escapeCmdMetaChars(arg)
+		}
+		args = append([]string{"/C", cmd}, escapedArgs...)
+		cmd = "cmd"
+	}
 	concurrentGitRetriesLeft := concurrentGitRetries
 	var err error
 	for {
@@ -127,4 +139,18 @@ func (self *FrontendRunner) execute(env []string, cmd string, args ...string) er
 		time.Sleep(concurrentGitRetryDelay)
 	}
 	return err
+}
+
+// escapeCmdMetaChars escapes characters that CMD.EXE treats as metacharacters
+// by prefixing them with "^", the CMD escape character.
+// This is necessary when passing arguments through "cmd /C" because CMD
+// re-parses the entire command string, ignoring any quoting done by the caller.
+func escapeCmdMetaChars(s string) string {
+	return strings.NewReplacer(
+		"^", "^^", // must be first to avoid double-escaping
+		"&", "^&",
+		"|", "^|",
+		"<", "^<",
+		">", "^>",
+	).Replace(s)
 }

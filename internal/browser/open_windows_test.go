@@ -13,14 +13,16 @@ import (
 func TestOpenOnWindows(t *testing.T) {
 	t.Parallel()
 
-	t.Run("uses rundll32 for the default browser", func(t *testing.T) {
+	t.Run("passes the URL unmodified to the start command", func(t *testing.T) {
 		t.Parallel()
 
 		runner := &recordingRunner{}
 
 		Open("https://bitbucket.org/org/repo/pull-requests/new?source=branch&dest=org%2Frepo%3Amain", runner, None[browserdomain.BrowserExecutable](), true)
 
-		must.Eq(t, [][]string{{"rundll32", "url.dll,FileProtocolHandler", "https://bitbucket.org/org/repo/pull-requests/new?source=branch&dest=org%2Frepo%3Amain"}}, runner.calls)
+		// The URL is passed to "start" as-is; the frontend runner wraps it as
+		// "cmd /C start <escaped-url>" so CMD metacharacters like "&" are escaped.
+		must.Eq(t, [][]string{{"start", "https://bitbucket.org/org/repo/pull-requests/new?source=branch&dest=org%2Frepo%3Amain"}}, runner.calls)
 	})
 
 	t.Run("uses the configured browser executable", func(t *testing.T) {
